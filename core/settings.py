@@ -199,7 +199,7 @@ else:
     REDIS_URL = None
 
 
-TESTING = 'test' is sys.argv
+TESTING = 'test' in sys.argv
 TESTING = TESTING or 'test_coverage' in sys.argv or 'pytest' in sys.modules
 # Celery
 CELERY_BROKER_URL = f'{REDIS_URL}/0'  # Redis как брокер
