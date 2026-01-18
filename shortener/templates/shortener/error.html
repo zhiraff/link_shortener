@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %} Ошибка {% endblock %}
+{% block content %}
+    <!-- Основной контент -->
+    <div class="container">
+        <div class="main-container">
+            <h1 class="text-center mb-4">Ошибка</h1>
+            <p class="text-center text-muted mb-5">
+                {{ error_text }}
+            </p>
+        </div>
+    </div>
+{% endblock %}
+    
+

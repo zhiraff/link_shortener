@@ -1,0 +1,89 @@
+version: '3.3'
+services:
+  shortener-backend:
+    container_name: shortener-backend
+    network_mode: bridge
+    restart: always
+    links:
+      - shortener-database
+      - shortener-redis
+    image: shortener:latest
+    build: .
+    env_file:
+      - .env-sample
+    depends_on:
+      - shortener-database
+      - shortener-redis
+    environment:
+      - DB_HOST=shortener-database
+      - REDIS_HOST=shortener-redis
+      - REDIS_PORT=6379
+      - REDIS_PROTOCOL=redis
+    command: bash -c "
+              python manage.py check
+              && python manage.py makemigrations
+              && python manage.py migrate
+              && gunicorn -c gunicorn.conf.py core.wsgi:application
+              "
+    ports:
+      - '8000:8000'
+    expose:
+      - 8000
+
+  shortener-database:
+    container_name: shortener-database
+    image: postgres:16.4
+    restart: always
+    network_mode: bridge
+    env_file:
+      - .env_db-sample
+    ports:
+      - "5432:5432"
+#    volumes:
+#      - /opt/shortener/pg_db:/var/lib/postgresql/data
+
+  shortener-celery:
+    container_name: shortener-celery
+    network_mode: bridge
+    image: shortener:latest
+    command: celery -A core worker --loglevel=info
+    links:
+      - shortener-database
+      - shortener-redis
+    environment:
+      - DB_HOST=shortener-database
+      - REDIS_HOST=shortener-redis
+      - REDIS_PORT=6379
+      - REDIS_PROTOCOL=redis
+    env_file:
+      - .env-sample
+    depends_on:
+      - shortener-backend
+      - shortener-redis
+#    volumes:
+#      - /opt/shortener/media:/opt/app/media
+
+  shortener-redis:
+    container_name: shortener-redis
+    image: redis:8.0.1-alpine
+    network_mode: bridge
+
+  shortener-celery-dashboard:
+    container_name: shortener-celery-dashboard
+    network_mode: bridge
+    image: shortener
+    command:  celery --broker=redis://shortener-redis:6379/0 flower --url_prefix=/shortener-celery/ --port=5555
+    ports:
+      - 5555:5555
+    env_file:
+      - .env-sample
+    links:
+      - shortener-redis
+    environment:
+      - REDIS_HOST=shortener-redis
+      - REDIS_PORT=6379
+      - REDIS_PROTOCOL=redis
+    depends_on:
+      - shortener-backend
+      - shortener-redis
+      - shortener-celery

@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% block title %} Главная {% endblock %}
+{% block content %}
+    <!-- Основной контент -->
+    <div class="container">
+        <div class="main-container">
+            <h1 class="text-center mb-4">Сокращение ссылок</h1>
+            <p class="text-center text-muted mb-5">
+                Сократите ссылку или обработайте файл Excel с несколькими ссылками
+            </p>
+
+            <!-- Форма для одиночной ссылки -->
+            <div class="form-section">
+                <h3 class="section-title">
+                    <i class="fas fa-link me-2"></i>
+                    Одиночная ссылка
+                </h3>
+                
+                <form id="singleUrlForm" method="POST" action="{% url 'shorten_single' %}">
+                    {% csrf_token %}
+                    
+                    <!-- URL -->
+                    <div class="mb-3">
+                        <label for="original_url" class="form-label">
+                            <strong>Оригинальная ссылка:</strong>
+                        </label>
+                        <input type="url" 
+                               class="form-control form-control-lg" 
+                               id="original_url" 
+                               name="original_url" 
+                               placeholder="https://example.com/very-long-url-path" 
+                               required>
+                        <div class="form-text">Введите полный URL (с http:// или https://)</div>
+                    </div>
+
+                    <!-- Длина короткой ссылки -->
+                    <div class="mb-4">
+                        <label for="short_length" class="form-label">
+                            <strong>Длина короткой ссылки:</strong>
+                            <span id="lengthValue" class="badge bg-primary ms-2">12</span>
+                        </label>
+                        <input type="range" 
+                               class="form-range" 
+                               id="short_length" 
+                               name="short_length" 
+                               min="6" 
+                               max="20" 
+                               value="12"
+                               oninput="document.getElementById('lengthValue').textContent = this.value">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">6 символов</small>
+                            <small class="text-muted">20 символов</small>
+                        </div>
+                    </div>
+
+                    <!-- Использовать цифры -->
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   id="use_digits" 
+                                   name="use_digits" 
+                                   checked>
+                            <label class="form-check-label" for="use_digits">
+                                <strong>Использовать цифры в короткой ссылке</strong>
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            Если отключено, будут использоваться только буквы
+                        </div>
+                    </div>
+
+                    <!-- Кнопка отправки -->
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-magic me-2"></i>
+                            Сократить ссылку
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Результат для одиночной ссылки -->
+                {% if show_single_result %}
+                <div id="singleResult" class="result-container">
+                    <h5><i class="fas fa-check-circle text-success me-2"></i>Ссылка успешно сокращена!</h5>
+                    <div class="input-group mt-4">
+ <!-- QR-код слева -->
+        <div class="col-md-3 col-lg-2 text-center mb-3 mb-md-0">
+            <div class="qr-code-container border rounded p-2 bg-white shadow-sm">
+                {% if qr_code_url %}
+                <img src="{{ qr_code_url }}" 
+                     alt="QR-код для {{ short_url }}" 
+                     class="img-fluid qr-code-image"
+                     id="qrCodeImage">
+                {% elif qr_code_base64 %}
+                <img src="data:image/png;base64,{{ qr_code_base64 }}" 
+                     alt="QR-код для {{ short_url }}" 
+                     class="img-fluid qr-code-image"
+                     id="qrCodeImage">
+                {% endif %}
+            </div>
+        </div>
+                        <input type="text" 
+                               class="form-control" 
+                               id="shortenedUrl" 
+                               readonly 
+                               value="{{short_url}}">
+
+                        <button class="btn btn-outline-primary" type="button" onclick="copyToClipboard()">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <a href="{{short_url}}" class="btn btn-success" id="openLink" target="_blank">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                    <div class="mt-3">
+                        <strong>Статистика:</strong>
+                        <span class="text-muted">Создана {{created}} • {{clicks}} переходов</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Форма для файла Excel -->
+            <div class="form-section">
+                <h3 class="section-title">
+                    <i class="fas fa-file-excel me-2"></i>
+                    Пакетная обработка (Excel)
+                </h3>
+                
+                <form id="batchForm" method="POST" action="{% url 'process_batch' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Загрузка файла -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <strong>Загрузите файл Excel (.xlsx):</strong>
+                        </label>
+                        <div class="file-input-wrapper">
+                            <div class="custom-file-label">
+                                <i class="fas fa-cloud-upload-alt fa-2x mb-3"></i>
+                                <h5>Нажмите для загрузки файла</h5>
+                                <p class="text-muted">Перетащите или выберите файл .xlsx</p>
+                                <input type="file" 
+                                       class="form-control" 
+                                       id="excel_file" 
+                                       name="excel_file" 
+                                       accept=".xlsx,.xls" 
+                                       required>
+                            </div>
+                            <div id="fileName" class="file-name"></div>
+                        </div>
+                        <div class="form-text">
+                            Файл должен содержать столбец с оригинальными ссылками
+                        </div>
+                    </div>
+
+                    <!-- Настройки для пакетной обработки -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="batch_length" class="form-label">Длина коротких ссылок</label>
+                            <select class="form-select" id="batch_length" name="batch_length">
+                                <option value="8">8 символов</option>
+                                <option value="10" selected>10 символов</option>
+                                <option value="12">12 символов</option>
+                                <option value="15">15 символов</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Параметры</label>
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="batch_use_digits" 
+                                       name="batch_use_digits" 
+                                       checked>
+                                <label class="form-check-label" for="batch_use_digits">
+                                    Использовать цифры
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Кнопка обработки -->
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-cogs me-2"></i>
+                            Обработать файл
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Результат для пакетной обработки -->
+                {% if show_batch_result %}
+                <div id="batchResult" class="result-container">
+                    <h5><i class="fas fa-file-excel text-success me-2"></i>Файл загружен!</h5>
+                    <p class="mt-3">Через некоторое время его можно будет скачать</p>
+                    <div class="text-center mt-4">
+                        <a href="{{ batch_link }}" class="btn btn-success btn-lg" id="downloadLink">
+                            <i class="fas fa-download me-2"></i>
+                            Результат можно скачать по ссылке {{ batch_link }}
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Индикатор загрузки -->
+            <div id="loading" class="loading">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                </div>
+                <h5 class="mt-3">Обработка...</h5>
+                <p class="text-muted">Пожалуйста, подождите</p>
+            </div>
+
+            <!-- Информационный блок -->
+            <div class="alert alert-info mt-4">
+                <h5><i class="fas fa-info-circle me-2"></i>Как это работает?</h5>
+                <ul class="mb-0">
+                    <li>Одиночная ссылка: введите URL и получите короткую версию</li>
+                    <li>Пакетная обработка: загрузите Excel файл со списком ссылок</li>
+                    <li>Скачайте обработанный файл с короткими ссылками</li>
+                    <li>Все ссылки уникальны и могут быть отслежены</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+    
+
