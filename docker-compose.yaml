@@ -23,6 +23,7 @@ services:
               python manage.py check
               && python manage.py makemigrations
               && python manage.py migrate
+              && python manage.py start_init
               && gunicorn -c gunicorn.conf.py core.wsgi:application
               "
     ports:

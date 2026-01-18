@@ -2,8 +2,8 @@
 
 ### Быстрый запуск
 
-``` docker-compose build ```
-``` docker-compose up -d ```
+``` docker-compose build && docker-compose up -d```
+
 
 доступно по адресу: http://localhost:8000
 
@@ -11,8 +11,10 @@
 
 ### Если не запустилось то
 
-``` docker build -t shortener:latest . ```
-``` docker-compose up -d ```
+``` docker pull python:3.12-slim ```
+``` docker pull postgres:16.4 ```
+``` docker pull redis:8.0.1-alpine ```
+``` docker-compose build && docker-compose up -d ```
 
 ### Для правильного запуска нужно редактировать файлы:
 .env-sample
@@ -21,7 +23,7 @@ docker-compose.yaml
 
 ### Описание:
 
-Использовано: Django 4.2.27, qrcode, psycopg2-binary, pandas, openpyxl, celery, redis, gunicorn
+Использовано: Django, qrcode, psycopg2-binary, pandas, openpyxl, celery, redis, gunicorn
 
 Одиночная ссылка конвертируется сразу и отдаётся пользователю.
 Если загружается файл excel, то пользователю отдаётся ссылка на скачивание. Сам файл обрабатывается фоном в Celery.
