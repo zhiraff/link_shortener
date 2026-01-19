@@ -1,5 +1,12 @@
 ## Сокращатель ссылок
 
+## Пример работы можно посмотреть по адресу:
+
+https://clicker.evutech.ru/
+
+Логин/пароль для входа в админку: guest/guest
+
+
 ### Быстрый запуск
 
 ``` docker-compose build && docker-compose up -d```

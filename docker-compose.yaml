@@ -30,6 +30,9 @@ services:
       - '8000:8000'
     expose:
       - 8000
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/static
 
   shortener-database:
     container_name: shortener-database
@@ -40,8 +43,8 @@ services:
       - .env_db-sample
     ports:
       - "5432:5432"
-#    volumes:
-#      - /opt/shortener/pg_db:/var/lib/postgresql/data
+    volumes:
+      - db_data:/var/lib/postgresql/data
 
   shortener-celery:
     container_name: shortener-celery
@@ -61,8 +64,8 @@ services:
     depends_on:
       - shortener-backend
       - shortener-redis
-#    volumes:
-#      - /opt/shortener/media:/opt/app/media
+    volumes:
+      - media_data:/app/media
 
   shortener-redis:
     container_name: shortener-redis
@@ -88,3 +91,8 @@ services:
       - shortener-backend
       - shortener-redis
       - shortener-celery
+
+volumes:
+  media_data:
+  static_data:
+  db_data:

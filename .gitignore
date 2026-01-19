@@ -10,3 +10,4 @@ static
 .env_db
 .env_local
 .env_db_local
+docker-compose_*.yaml
