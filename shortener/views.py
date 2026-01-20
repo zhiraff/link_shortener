@@ -3,17 +3,22 @@ import os
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
 from django.http import HttpResponse, JsonResponse, FileResponse
+from rest_framework.views import APIView
+from django.http import JsonResponse
+from rest_framework import generics, status
 
 from .models import ShortLink, UploadFile
 
 from .forms import SingleURLForm, BatchProcessForm
 from .utils.generators import generate_short_link
 from .utils.excel_processor import process_excel
-from .tasks import test_task
+
+from .serializers import LinkSerializer
+
 
 def index_view(request):
     """Главная страница"""
-    t = test_task.delay()
+
     context = {
         'single_form': SingleURLForm(),
         'batch_form': BatchProcessForm(),
@@ -116,3 +121,41 @@ def download_file_view(request, slug):
             return render(request=request, template_name='shortener/error.html', context={"error_text": f"Файл { slug } не найден или ещё не готов. Попробуйте позже!"})
     except:
         return render(request=request, template_name='shortener/error.html', context={"error_text": f"Файл { slug } не найден или ещё не готов. Попробуйте позже!"})
+
+
+
+class CreateSingleLinkView(generics.GenericAPIView):
+    serializer_class = LinkSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.validate(request.data)
+        if serializer.is_valid():
+            # serializer.data['password1']
+            # Возьмём старую ссылку если есть, если нет то созхдадим новую
+            short_tag = ShortLink.objects.get_or_create(
+            full_link=serializer.data['link'],
+            defaults={'short_link': generate_short_link(use_numeric=serializer.data['use_numeric'], length=serializer.data['length']),
+                          }
+        )
+        short_url = f"{os.environ.get('DOMAIN')}/{short_tag[0]}" 
+        #print("11111111111")
+        #print(*args)
+        #print(**kwargs)
+        #print(request.data)
+        #version = os.getenv('version', "TEST BUILD 0.1")
+        return JsonResponse({'short_link': short_url}, status=status.HTTP_200_OK)
+
+
+class GetSingleLinkView(generics.GenericAPIView):
+    # serializer_class = LinkSerializer
+
+    def get(self, request, *args, **kwargs):
+        try:
+            slug = kwargs.get('slug')
+            short_record = ShortLink.objects.get(short_link=slug)
+            short_record.redirect_count += 1
+            short_record.save()
+            return JsonResponse({'original_link': short_record.full_link}, status=status.HTTP_200_OK)
+        except:
+            return JsonResponse({'error': "No link found"}, status=status.HTTP_404_NOT_FOUND)

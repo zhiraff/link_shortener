@@ -28,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECRET_KEY = 'django-insecure-u1c-n2k%7y7t)o5^b0t10osoya4m0w#lo(cqe@8f1p0b6t!_1+'
 SECRET_KEY = os.getenv("SECRET")
 
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS").split(",")
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -43,9 +43,10 @@ DB_ADDRESS = ''
 
 while not DB_ADDRESS:
     try:
-        DB_ADDRESS = socket.gethostbyname(os.environ.get('DB_HOST'))
+        DB_ADDRESS = socket.gethostbyname(os.environ.get('DB_HOST', '172.17.0.2'))
     except Exception as e:
         print('DB Unavailable')
+        print(os.environ.get('DB_HOST', '172.17.0.2'))
         time.sleep(10)
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
@@ -62,6 +63,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_celery_results',
     'django_cleanup',
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
+    "rest_framework",
+    "drf_yasg",
     'corsheaders',
     'shortener.apps.ShortenerConfig',
     'account.apps.AccountConfig'
@@ -183,7 +188,7 @@ if USE_X_FORWARDED_HOST.lower() in ('false', '0') or not USE_X_FORWARDED_HOST:
 else:
     USE_X_FORWARDED_HOST = True
 FORCE_SCRIPT_NAME = f'{os.getenv("PREFIX_PATH", "")}'
-CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS").split(",")
+CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
 DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.getenv("DATA_UPLOAD_MAX_NUMBER_FIELDS"))
 
 
@@ -219,3 +224,59 @@ if platform.system() == 'Windows':
 
 if TESTING:
     CELERY_TASK_ALWAYS_EAGER = True
+
+# DRF
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+    "rest_framework_simplejwt.authentication.JWTAuthentication",
+    "rest_framework.authentication.BasicAuthentication",
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': os.getenv("THROTTLE_RATE_ANON", '500/day'),
+        'user': os.getenv("THROTTLE_RATE_USER", '20000/day'),
+    #    'send_lpr_basket_ready': os.getenv("THROTTLE_RATE_SEND_LPR_BASKET_READY", '1/hour'),
+    },
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
+    'DATE_FORMAT': "%d.%m.%Y",
+    'DATETIME_FORMAT': "%d.%m.%y %H:%M:%S",
+    # 'DEFAULT_PERMISSION_CLASSES': (
+    #     'rest_framework.permissions.IsAuthenticated',
+    # )
+}
+
+SWAGGER_SETTINGS = {
+   'SECURITY_DEFINITIONS': {
+      'Basic': {
+            'type': 'basic'
+      },
+      'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+      }
+   }
+}
+
+# JWT
+#JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+#JWT_SIGNING_KEY = os.getenv("JWT_SIGNING_KEY", None)
+#JWT_VERIFYING_KEY = os.getenv("JWT_VERIFYING_KEY", None)
+
+#SIMPLE_JWT = {
+#    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("ACCESS_TOKEN_LIFETIME", 3))),
+#    "REFRESH_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("REFRESH_TOKEN_LIFETIME", 15))),
+#    "ROTATE_REFRESH_TOKENS": True,
+#}
+
+#if 'rs' in JWT_ALGORITHM.lower() and JWT_SIGNING_KEY and JWT_VERIFYING_KEY:
+#    SIMPLE_JWT["ALGORITHM"] = JWT_ALGORITHM
+#    SIMPLE_JWT["SIGNING_KEY"] = JWT_SIGNING_KEY
+#    SIMPLE_JWT["VERIFYING_KEY"] = JWT_VERIFYING_KEY
+#elif 'hs' in JWT_ALGORITHM.lower():
+#    SIMPLE_JWT["ALGORITHM"] = JWT_ALGORITHM
