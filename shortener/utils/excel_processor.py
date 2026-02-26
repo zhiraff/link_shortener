@@ -13,7 +13,7 @@ from .generators import generate_short_link
 
 
 @shared_task
-def process_excel(_id: str, use_numeric: bool=True, length: int=6) -> None:
+def process_excel(_id: str, usr_name: str="Anonymous") -> None:
     """
     Обрабатывает Excel файл, ищет URL и добавляет укороченные url и ссылку на qr, сохраняет как новый файл и добавляет его к модели.
     
@@ -101,6 +101,7 @@ def process_excel(_id: str, use_numeric: bool=True, length: int=6) -> None:
             # Возьмём старую ссылку если есть, если нет то созхдадим новую
             short_tag = ShortLink.objects.get_or_create(
             full_link=url,
+            owner_user=usr_name,
             defaults={'short_link': generate_short_link(),
                           }
             )
