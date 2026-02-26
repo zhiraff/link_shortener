@@ -101,7 +101,7 @@ def process_excel(_id: str, use_numeric: bool=True, length: int=6) -> None:
             # Возьмём старую ссылку если есть, если нет то созхдадим новую
             short_tag = ShortLink.objects.get_or_create(
             full_link=url,
-            defaults={'short_link': generate_short_link(use_numeric=use_numeric, length=length),
+            defaults={'short_link': generate_short_link(),
                           }
             )
             short_url = f"{os.environ.get('DOMAIN')}/{short_tag[0]}"

@@ -2,10 +2,12 @@ import os
 
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
-from django.http import HttpResponse, JsonResponse, FileResponse
+from django.http import HttpResponse, JsonResponse, FileResponse, HttpRequest
 from rest_framework.views import APIView
-from django.http import JsonResponse
 from rest_framework import generics, status
+from django.core.validators import URLValidator
+from django.urls import reverse
+from django.core.exceptions import ValidationError
 
 from .models import ShortLink, UploadFile
 
@@ -16,85 +18,99 @@ from .utils.excel_processor import process_excel
 from .serializers import LinkSerializer
 
 
+def _is_ajax(request: HttpRequest) -> bool:
+    return request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+url_validator = URLValidator()
+
 def index_view(request):
-    """Главная страница"""
+    """Главная страница
+
+    Обрабатывает:
+    - GET, POST, Other: отдаёт страницу с формами.
+    - POST + AJAX + поле url: сокращение одной ссылки.
+    - POST + AJAX + файл xlsx_file: пакетная обработка XLSX.
+    """
+    
+    if request.method == "POST" and _is_ajax(request):
+        if "xlsx_file" in request.FILES:
+            # отправили файл
+            # получим файл из формы
+            uploaded = request.FILES.get("xlsx_file")
+
+            # проверка что файл есть
+            if not uploaded:
+                return JsonResponse({"error": "Файл не передан."}, status=400)
+
+            # првоерка что он xlsx
+            if not uploaded.name.lower().endswith(".xlsx"):
+                return JsonResponse({"error": "Нужен файл в формате .xlsx."}, status=400)
+            
+            # создадим тэг
+            short_tag = generate_short_link()
+
+            # сохраним файл исходный
+            upl_file = UploadFile.objects.create(
+            id_link=short_tag,
+            input_file=uploaded,
+            owner_user="Anonymous" if request.user.is_anonymous else request.user.username,
+            )
+
+            # отправить файл на обработку в celery
+
+            process_excel.delay(upl_file.pk)
+
+            # сгененрируем ссылку на скачивание файла
+            download_url = request.build_absolute_uri(
+                reverse("shortener:download_file", args=[short_tag])
+            )
+
+            return JsonResponse({"download_url": download_url})
+
+        else:
+            # отправили форму с ссылкой
+            # получим данные из AJAX запроса
+            original_url = (request.POST.get("url") or "").strip()
+            if not original_url:
+                return JsonResponse({"error": "Не передан URL."}, status=400)
+
+            # валидируем что это норм ссылка
+            try:
+                url_validator(original_url)
+            except ValidationError:
+                return JsonResponse({"error": "Некорректный URL."}, status=400)
+            
+            # Возьмём старую ссылку если есть, если нет то создадим новую
+            short_tag, tag_created = ShortLink.objects.get_or_create(
+            full_link=original_url,
+            owner_user="Anonymous" if request.user.is_anonymous else request.user.username,
+            defaults={'short_link': generate_short_link(),
+                          }
+                                )
+
+            # сгененрируем нормальную короткую ссылку
+            short_url = request.build_absolute_uri(
+                reverse("shortener:resolve_slug", args=[short_tag.short_link])
+            )
+
+            # подготовим и отправим ответ для AJAX
+            data = {
+                "short_url": short_url,
+                "created_at": "только что" if tag_created else short_tag.created_at.strftime("%Y-%m-%d %H:%M"),
+                "clicks": short_tag.redirect_count,
+                "qr_code_url": (
+                    short_tag.qr_code.url if getattr(short_tag, "qr_code", None) else ""
+                ),
+            }
+
+            return JsonResponse(data)
+            # short_url = f"{os.environ.get('DOMAIN')}/{short_tag[0]}"        
 
     context = {
         'single_form': SingleURLForm(),
         'batch_form': BatchProcessForm(),
     }
     return render(request=request, template_name='shortener/index.html', context=context)
-
-
-@require_POST
-def shorten_single_view(request):
-    """Обработка одиночной ссылки"""
-    form = SingleURLForm(request.POST)
-    
-    if form.is_valid():
-
-        original_url = form.cleaned_data['original_url']
-        short_length = form.cleaned_data['short_length']
-        use_digits = form.cleaned_data['use_digits']
-
-        # Возьмём старую ссылку если есть, если нет то созхдадим новую
-        short_tag = ShortLink.objects.get_or_create(
-            full_link=original_url,
-            defaults={'short_link': generate_short_link(use_numeric=use_digits, length=short_length),
-                          }
-        )
-        short_url = f"{os.environ.get('DOMAIN')}/{short_tag[0]}"            
-        
-        return render(request, 'shortener/index.html', {
-            'single_form': form,
-            'short_url': short_url,
-            'show_single_result': True,
-            'qr_code_url': short_tag[0].qr_code.url,
-            'clicks': short_tag[0].redirect_count,
-            'created': "только что" if short_tag[1] else short_tag[0].created_at,
-        })
-    
-    # Если форма не валидна
-    
-    return render(request, 'base.html', {
-        'single_form': form,
-        'batch_form': BatchProcessForm(),
-    })
-
-
-@require_POST
-def process_batch_view(request):
-    """Обработка Excel файла"""
-    form = BatchProcessForm(request.POST, request.FILES)
-    
-    if form.is_valid():
-        excel_file = form.cleaned_data['excel_file']
-        batch_length = int(form.cleaned_data['batch_length'])
-        use_digits = form.cleaned_data['batch_use_digits']
-
-        short_tag = generate_short_link(use_numeric=use_digits, length=batch_length)
-        upl_file = UploadFile.objects.create(
-            id_link=short_tag,
-            input_file=excel_file
-        )
-
-        # отправить файл на обработку в celery
-
-        process_excel.delay(upl_file.pk, use_digits, batch_length)
-
-        return render(request=request, template_name='shortener/index.html', 
-        context={
-            'batch_form': form,
-            'show_batch_result': True,
-            'batch_link': f"{os.environ.get('DOMAIN')}/f/{short_tag}"
-            })
-    
-    # Если форма не валидна
-    
-    return render(request, 'base.html', {
-        'single_form': SingleURLForm(),
-        'batch_form': form,
-    })
 
 
 def resolve_slug_view(request, slug):
@@ -132,18 +148,18 @@ class CreateSingleLinkView(generics.GenericAPIView):
         serializer.validate(request.data)
         if serializer.is_valid():
             # serializer.data['password1']
+            try:
+                url_validator(serializer.data['link'])
+            except ValidationError:
+                return JsonResponse({'error': f"Не верный url: '{serializer.data['link']}'"}, status=status.HTTP_400_BAD_REQUEST)
+
             # Возьмём старую ссылку если есть, если нет то созхдадим новую
             short_tag = ShortLink.objects.get_or_create(
             full_link=serializer.data['link'],
-            defaults={'short_link': generate_short_link(use_numeric=serializer.data['use_numeric'], length=serializer.data['length']),
+            defaults={'short_link': generate_short_link(),
                           }
         )
         short_url = f"{os.environ.get('DOMAIN')}/{short_tag[0]}" 
-        #print("11111111111")
-        #print(*args)
-        #print(**kwargs)
-        #print(request.data)
-        #version = os.getenv('version', "TEST BUILD 0.1")
         return JsonResponse({'short_link': short_url}, status=status.HTTP_200_OK)
 
 

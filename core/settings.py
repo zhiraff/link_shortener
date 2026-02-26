@@ -225,6 +225,11 @@ if platform.system() == 'Windows':
 if TESTING:
     CELERY_TASK_ALWAYS_EAGER = True
 
+# Настройки коротких ссылок
+
+SHORT_LINK_LENGTH = int(os.getenv("link_length", "8"))
+SHORT_LINK_USE_DIGITS = bool(os.getenv("link_use_digits", 0))
+
 # DRF
 REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_CLASSES': [
@@ -280,3 +285,4 @@ SWAGGER_SETTINGS = {
 #    SIMPLE_JWT["VERIFYING_KEY"] = JWT_VERIFYING_KEY
 #elif 'hs' in JWT_ALGORITHM.lower():
 #    SIMPLE_JWT["ALGORITHM"] = JWT_ALGORITHM
+

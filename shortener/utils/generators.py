@@ -3,17 +3,19 @@ import string
 import qrcode
 from io import BytesIO
 
-def generate_short_link(use_numeric: bool=True, length: int=6) -> str:
+from django.conf import settings
 
-    if use_numeric:
+def generate_short_link() -> str:
+
+    if settings.SHORT_LINK_USE_DIGITS:
         ALPHABET: str = string.ascii_letters + string.digits
     else:
         ALPHABET: str = string.ascii_letters
     
-    if length < 6:
+    if settings.SHORT_LINK_LENGTH < 6:
         raise ValueError()
     res = ''
-    for _ in range(length):
+    for _ in range(settings.SHORT_LINK_LENGTH):
         res += choice(ALPHABET)
     
     return res
