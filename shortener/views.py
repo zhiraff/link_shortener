@@ -34,7 +34,7 @@ def index_view(request):
     
     if request.method == "POST" and _is_ajax(request):
         # user
-            usr_name = "Anonymous" if request.user.is_anonymous else request.user.username
+        usr_name = "Anonymous" if request.user.is_anonymous else request.user.username
 
         if "xlsx_file" in request.FILES:
             # отправили файл
