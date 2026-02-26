@@ -33,6 +33,9 @@ def index_view(request):
     """
     
     if request.method == "POST" and _is_ajax(request):
+        # user
+            usr_name = "Anonymous" if request.user.is_anonymous else request.user.username
+
         if "xlsx_file" in request.FILES:
             # отправили файл
             # получим файл из формы
@@ -53,12 +56,12 @@ def index_view(request):
             upl_file = UploadFile.objects.create(
             id_link=short_tag,
             input_file=uploaded,
-            owner_user="Anonymous" if request.user.is_anonymous else request.user.username,
+            owner_user=usr_name,
             )
 
             # отправить файл на обработку в celery
 
-            process_excel.delay(upl_file.pk)
+            process_excel.delay(upl_file.pk, usr_name)
 
             # сгененрируем ссылку на скачивание файла
             download_url = request.build_absolute_uri(
@@ -83,7 +86,7 @@ def index_view(request):
             # Возьмём старую ссылку если есть, если нет то создадим новую
             short_tag, tag_created = ShortLink.objects.get_or_create(
             full_link=original_url,
-            owner_user="Anonymous" if request.user.is_anonymous else request.user.username,
+            owner_user=usr_name,
             defaults={'short_link': generate_short_link(),
                           }
                                 )
