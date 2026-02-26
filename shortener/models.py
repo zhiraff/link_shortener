@@ -17,7 +17,8 @@ class ShortLink(models.Model):
         default=generate_short_link, 
         editable=False, 
         unique=True)
-    full_link = models.CharField(max_length=512, verbose_name="Полная ссылка", unique=True, db_index=True)
+    owner_user = models.CharField(max_length=256, verbose_name="Создано пользователем", default="Anonymous")
+    full_link = models.CharField(max_length=512, verbose_name="Полная ссылка", db_index=True)
     qr_code = models.ImageField(upload_to="qr_codes/%Y", max_length=150, verbose_name="QR-код", null=True, blank=True)
     redirect_count = models.IntegerField(verbose_name='Количество переходов', default=0)
     created_at = models.DateTimeField(verbose_name="Дата создания", auto_now_add=True)
@@ -37,6 +38,7 @@ class ShortLink(models.Model):
     class Meta:
         verbose_name = 'Укороченная ссылка'
         verbose_name_plural = 'Укороченные ссылки'
+        unique_together = ['full_link', 'owner_user']
 
 
 class UploadFile(models.Model):
@@ -55,6 +57,7 @@ class UploadFile(models.Model):
         editable=False, 
         unique=True
         )
+    owner_user = models.CharField(max_length=256, verbose_name="Создано пользователем", default="Anonymous")
     file_status = models.CharField(max_length=100, verbose_name='Статус файла', choices=statuses, default='created')
     input_file = models.FileField(upload_to="input_files/%Y", max_length=150, verbose_name="Файл для обработки",
                             validators=[FileExtensionValidator(allowed_extensions=['xlsx'])]

@@ -1,7 +1,14 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.utils.html import format_html
+from django.core.validators import URLValidator
+from django.core.exceptions import ValidationError
+from django.shortcuts import redirect
 
 from .models import ShortLink, UploadFile
+from .utils.excel_processor import process_excel
+
+url_validator = URLValidator()
+
 
 class ShortLinkAdmin(admin.ModelAdmin):
     """Класс отображающий сокращённые ссылки в админке"""
@@ -17,6 +24,44 @@ class ShortLinkAdmin(admin.ModelAdmin):
 
     fields = ("short_link", "full_link", "qr_code", "redirect_count", "created_at", "updated_at")
     readonly_fields = ("short_link", "qr_code", "redirect_count", "created_at", "updated_at")
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        
+        # Фильтрация в зависимости от пользователя
+        if request.user.is_superuser:
+            return qs  # Суперпользователь видит всё
+        else:
+            return qs.filter(owner_user=request.user.username)
+    
+    def save_model(self, request, obj, form, change):
+        # Автоматически заполняем owner_user перед сохранением
+        obj.owner_user = request.user.username
+
+        try:
+            url_validator(obj.full_link)
+        except ValidationError:
+            messages.error(
+                request, 
+                f"Неверный url адрес: '{obj.full_link}'"
+            )
+            # Сохраняем флаг ошибки
+            request._save_error = True
+            # Возвращаем None и не вызываем super().save_model()
+            return
+   
+        super().save_model(request, obj, form, change)
+    
+    def response_add(self, request, obj, post_url_continue=None):
+        if getattr(request, '_save_error', False):
+            # При ошибке редиректим на страницу списка
+            return redirect('admin:shortener_shortlink_changelist')
+        return super().response_add(request, obj, post_url_continue)
+    
+    def response_change(self, request, obj):
+        if getattr(request, '_save_error', False):
+            return redirect('admin:shortener_shortlink_changelist')
+        return super().response_change(request, obj)
     
         
 admin.site.register(ShortLink, ShortLinkAdmin)
@@ -57,7 +102,50 @@ class UploadFileAdmin(admin.ModelAdmin):
     get_output_file_link.short_description = 'Скачать результирующий файл'
 
     fields = ("id_link", "file_status", "input_file", "output_file", "task_id", "created_at", "updated_at")
-    readonly_fields = ("id_link", "task_id", "created_at", "updated_at")
+    readonly_fields = ("id_link", "file_status", "output_file", "task_id", "created_at", "updated_at")
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        
+        # Фильтрация в зависимости от пользователя
+        if request.user.is_superuser:
+            return qs  # Суперпользователь видит всё
+        else:
+            return qs.filter(owner_user=request.user.username)
+
+    
+    def save_model(self, request, obj, form, change):
+        # Автоматически заполняем owner_user перед сохранением
+        obj.owner_user = request.user.username
+
+        ext = obj.input_file.name.lower().split('.')[-1]
+
+        if ext != "xlsx":
+            messages.error(
+                request, 
+                f"Неверное расширение файла: '{ext}', должно быть xlsx"
+            )
+            # Сохраняем флаг ошибки
+            request._save_error = True
+            # Возвращаем None и не вызываем super().save_model()
+            return
+        super().save_model(request, obj, form, change)
+
+        # вызовем celery для обработки
+
+        process_excel.delay(upl_file.pk)
+    
+    def response_add(self, request, obj, post_url_continue=None):
+        if getattr(request, '_save_error', False):
+            # При ошибке редиректим на страницу списка
+            return redirect('admin:shortener_uploadfile_changelist')
+        return super().response_add(request, obj, post_url_continue)
+    
+    def response_change(self, request, obj):
+        if getattr(request, '_save_error', False):
+            return redirect('admin:shortener_uploadfile_changelist')
+        return super().response_change(request, obj)
+
 
     class Media:
         css = {
