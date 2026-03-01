@@ -2,14 +2,16 @@
 
 ## Пример работы можно посмотреть по адресу:
 
-https://clicker.evutech.ru/
+https://safe-click.ru
 
 Логин/пароль для входа в админку: guest/guest
 
 
 ### Быстрый запуск
 
-``` docker-compose build && docker-compose up -d```
+```bash 
+docker-compose build && docker-compose up -d 
+```
 
 
 доступно по адресу: http://localhost:8000
@@ -18,10 +20,18 @@ https://clicker.evutech.ru/
 
 ### Если не запустилось то
 
-``` docker pull python:3.12-slim ```
-``` docker pull postgres:16.4 ```
-``` docker pull redis:8.0.1-alpine ```
-``` docker-compose build && docker-compose up -d ```
+```bash 
+docker pull python:3.12-slim
+```
+```bash 
+docker pull postgres:16.4
+```
+```bash 
+docker pull redis:8.0.1-alpine
+```
+```bash 
+docker-compose build && docker-compose up -d
+```
 
 ### Для правильного запуска нужно редактировать файлы:
 .env-sample
