@@ -1,10 +1,13 @@
 import os
+from urllib.parse import urlparse
 
 from django.db import models
 from django.core.validators import FileExtensionValidator
 from django.core.files.base import ContentFile
 
 from .utils.generators import generate_short_link, generate_qr_svg
+from .utils.parsers import get_host_from_url
+from .enums import host_colour, file_statuses
 
 __all__ = ['ShortLink', 'UploadFile']
 
@@ -18,6 +21,8 @@ class ShortLink(models.Model):
         editable=False, 
         unique=True)
     owner_user = models.CharField(max_length=256, verbose_name="Создано пользователем", default="Anonymous")
+    host = models.CharField(max_length=256, verbose_name="Хост", default='', db_index=True)
+    colour = models.CharField(max_length=20, verbose_name="Цвет ссылки", choices=host_colour, default='green')
     full_link = models.CharField(max_length=512, verbose_name="Полная ссылка", db_index=True)
     qr_code = models.ImageField(upload_to="qr_codes/%Y", max_length=150, verbose_name="QR-код", null=True, blank=True)
     redirect_count = models.IntegerField(verbose_name='Количество переходов', default=0)
@@ -33,6 +38,8 @@ class ShortLink(models.Model):
             qr_code = generate_qr_svg(data=f"{os.environ.get('DOMAIN')}/{self.short_link}")
             filename = f'qr_{self.short_link}.png'
             self.qr_code.save(filename, ContentFile(qr_code.getvalue()), save=False)
+        # заполняем host
+        self.host = get_host_from_url(self.full_link)
         super().save(*args, **kwargs)
 
     class Meta:
@@ -43,12 +50,7 @@ class ShortLink(models.Model):
 
 class UploadFile(models.Model):
     """Загруженные файлы с ссылками"""
-    statuses = (
-        ('created', 'Создано'),
-        ('processing', 'Обработка'),
-        ('done', 'Обработано'),
-        ('error', 'Ошибка'),
-    )
+
     id_link = models.CharField(
         primary_key=True, 
         max_length=20, 
@@ -58,7 +60,7 @@ class UploadFile(models.Model):
         unique=True
         )
     owner_user = models.CharField(max_length=256, verbose_name="Создано пользователем", default="Anonymous")
-    file_status = models.CharField(max_length=100, verbose_name='Статус файла', choices=statuses, default='created')
+    file_status = models.CharField(max_length=100, verbose_name='Статус файла', choices=file_statuses, default='created')
     input_file = models.FileField(upload_to="input_files/%Y", max_length=150, verbose_name="Файл для обработки",
                             validators=[FileExtensionValidator(allowed_extensions=['xlsx'])]
                             )

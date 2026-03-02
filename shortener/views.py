@@ -9,6 +9,8 @@ from django.core.validators import URLValidator
 from django.urls import reverse
 from django.core.exceptions import ValidationError
 
+from blacklist.utils import is_black_host
+from blacklist.models import BlackHost
 from .models import ShortLink, UploadFile
 
 from .forms import SingleURLForm, BatchProcessForm
@@ -83,6 +85,11 @@ def index_view(request):
             except ValidationError:
                 return JsonResponse({"error": "Некорректный URL."}, status=400)
             
+            # Проверяем что хост не в чёрном списке
+            is_black, reason_black = is_black_host(original_url)
+            if is_black:
+                return JsonResponse({"error": f"Не удалось сократить ссылку, хост находится в чёрном списке по причине: {reason_black}"}, status=400)
+            
             # Возьмём старую ссылку если есть, если нет то создадим новую
             short_tag, tag_created = ShortLink.objects.get_or_create(
             full_link=original_url,
@@ -119,10 +126,35 @@ def index_view(request):
 def resolve_slug_view(request, slug):
     try:
         short_record = ShortLink.objects.get(short_link=slug)
-        short_record.redirect_count += 1
-        short_record.save()
-        return redirect(short_record.full_link)
-    except:
+        
+        if short_record.colour != 'green' or short_record.colour != '':
+            blkhst = BlackHost.objects.select_related('reason').get(host=short_record.host)
+            context = {'target_url': short_record.full_link, 
+            'host': short_record.host,
+            'reason': blkhst.reason.reason_description}
+
+        if short_record.colour == 'yellow':
+            # переход с предупреждением
+            return render(request, 'shortener/redirect_notify.html', 
+            context)
+
+        elif short_record.colour == 'red':
+            # переход с подтверждением
+            return render(request, 'shortener/redirect_confirm.html', 
+            context)
+
+        elif short_record.colour == 'black':
+
+            # Хост в чёрном списке, кинуть ошибку
+            return render(request=request, template_name='shortener/error.html', context={"error_text": f"Домен {short_record.host} находится в чёрном списке. Переходы заблокированы."})
+        else:
+            # цвет green или пустое
+            short_record.redirect_count += 1
+            short_record.save()
+            return redirect(short_record.full_link)
+            
+    except Exception as e:
+        print(e)
         return render(request=request, template_name='shortener/error.html', context={"error_text": f"Ссылка { slug } не найдена в базе"})
 
 
@@ -156,6 +188,11 @@ class CreateSingleLinkView(generics.GenericAPIView):
             except ValidationError:
                 return JsonResponse({'error': f"Не верный url: '{serializer.data['link']}'"}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Проверяем что хост не в чёрном списке
+            is_black, reason_black = is_black_host(original_url)
+            if is_black:
+                return JsonResponse({"error": f"Не удалось сократить ссылку, хост находится в чёрном списке по причине: {reason_black}"}, status=400)
+            
             # Возьмём старую ссылку если есть, если нет то созхдадим новую
             short_tag = ShortLink.objects.get_or_create(
             full_link=serializer.data['link'],

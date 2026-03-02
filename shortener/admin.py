@@ -1,9 +1,12 @@
+import os
+
 from django.contrib import admin, messages
 from django.utils.html import format_html
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect
 
+from blacklist.utils import is_black_host
 from .models import ShortLink, UploadFile
 from .utils.excel_processor import process_excel
 
@@ -12,12 +15,20 @@ url_validator = URLValidator()
 
 class ShortLinkAdmin(admin.ModelAdmin):
     """Класс отображающий сокращённые ссылки в админке"""
-    list_display = ["short_link", "full_link", "get_qrcode", "redirect_count", "created_at", "updated_at"]
-    list_display_links = ["short_link", "full_link", "redirect_count", "created_at", "updated_at"]
+    list_display = ["full_link", "host", "get_colour", "get_short_link", "get_qrcode", "redirect_count", "created_at", "updated_at"]
+    list_display_links = ["full_link","host", "get_colour", "redirect_count", "created_at", "updated_at"]
+
+    def get_colour(self, obj):
+        return obj.colour
+    get_colour.short_description = 'Цвет ссылки'
+
+    def get_short_link(self, obj):
+        return format_html(f"<a target=blank href='{os.environ.get('DOMAIN')}/{obj.short_link}'>{os.environ.get('DOMAIN')}/{obj.short_link}</a>")
+    get_short_link.short_description = 'Короткая ссылка'
 
     def get_qrcode(self, object):
         if object.qr_code.name:
-            return format_html(f"<img src='{object.qr_code.url}' width=50")
+            return format_html(f"<img src='{object.qr_code.url}' width=50>")
         else:
             return "no image"
     get_qrcode.short_description = 'QR Код'
@@ -49,6 +60,21 @@ class ShortLinkAdmin(admin.ModelAdmin):
             request._save_error = True
             # Возвращаем None и не вызываем super().save_model()
             return
+        
+        # Проверяем что хост не в чёрном списке
+
+        is_black, reason_black = is_black_host(obj.full_link)
+
+        if is_black:
+            messages.error(
+                request, 
+                f"Не удалось сократить ссылку, хост находится в чёрном списке по причине: {reason_black}"
+            )
+            # Сохраняем флаг ошибки
+            request._save_error = True
+            # Возвращаем None и не вызываем super().save_model()
+            return 
+            
    
         super().save_model(request, obj, form, change)
     

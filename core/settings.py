@@ -79,7 +79,8 @@ INSTALLED_APPS = [
     "drf_yasg",
     'corsheaders',
     'shortener.apps.ShortenerConfig',
-    'account.apps.AccountConfig'
+    'account.apps.AccountConfig',
+    'blacklist.apps.BlacklistConfig',
 ]
 
 MIDDLEWARE = [
