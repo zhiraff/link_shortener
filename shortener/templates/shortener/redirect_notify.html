@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Переход на подозрительный ресурс</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #2193b0, #6dd5ed);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        .info-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .timer-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px auto;
+            font-size: 24px;
+            font-weight: bold;
+            color: #2193b0;
+            border: 3px solid #2193b0;
+        }
+        .url-display {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            word-break: break-all;
+            margin: 20px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #2193b0;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #1a7a94;
+        }
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        .auto-redirect-text {
+            color: #666;
+            font-size: 14px;
+            margin: 20px 0 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="info-icon">🔗</div>
+        <h1>Переход на подозрительный сайт</h1>
+        <p>Вы собираетесь перейти на сайт:</p>
+        <div class="url-display" id="urlDisplay">{{ target_url }}</div>
+        <p>Будьте внитмательны потому, что хост {{ host }} помечен как подозрительный, по причине:</p>
+        <div class="url-display" id="reasonDisplay">{{ reason }}</div>
+        <p>Вы будете автоматически перенаправлены через:</p>
+        <div class="timer-circle" id="timer">10</div>
+        
+        <div class="buttons">
+            <a href="{{ target_url }}" class="btn btn-primary" id="redirectBtn">Перейти сейчас</a>
+            <a href="javascript:history.back()" class="btn btn-secondary">Остаться</a>
+        </div>
+        
+        <p class="auto-redirect-text" id="autoRedirectText">
+            Автоматический переход через 10 секунд...
+        </p>
+    </div>
+
+    <script>
+        (function() {
+            const targetUrl = '{{ target_url|safe }}';
+            const timerElement = document.getElementById('timer');
+            const autoRedirectText = document.getElementById('autoRedirectText');
+            const redirectBtn = document.getElementById('redirectBtn');
+            
+            let secondsLeft = 10;
+            let timerInterval;
+            
+            // Функция обновления таймера
+            function updateTimer() {
+                timerElement.textContent = secondsLeft;
+                
+                if (secondsLeft <= 0) {
+                    clearInterval(timerInterval);
+                    autoRedirectText.textContent = 'Перенаправление...';
+                    window.location.href = targetUrl;
+                } else {
+                    autoRedirectText.textContent = `Автоматический переход через ${secondsLeft} секунд...`;
+                }
+            }
+            
+            // Функция отмены таймера при ручном переходе
+            function cancelTimer() {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    autoRedirectText.textContent = 'Перенаправление по вашей команде...';
+                }
+            }
+            
+            // Запускаем таймер
+            timerInterval = setInterval(function() {
+                secondsLeft--;
+                updateTimer();
+            }, 1000);
+            
+            // Отменяем таймер при клике на кнопку перехода
+            redirectBtn.addEventListener('click', function(event) {
+                cancelTimer();
+                // Не отменяем стандартное поведение - пусть переходит по ссылке
+            });
+            
+            // Начальное обновление
+            updateTimer();
+            
+            // Дополнительно: если пользователь покидает страницу раньше времени
+            window.addEventListener('beforeunload', function() {
+                cancelTimer();
+            });
+            
+        })();
+    </script>
+</body>
+</html>

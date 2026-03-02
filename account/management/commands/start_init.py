@@ -3,6 +3,8 @@ import os
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand
+from blacklist.models import Reasons
+from blacklist.enums import initial_black_reasons
 
 class Command(BaseCommand):
     help = 'Заполнение таблиц первичными данными'
@@ -31,6 +33,20 @@ class Command(BaseCommand):
             print('Суперпользователь добавлен')
         else:
             print('Суперпользователь существует')
+        
+        print('Заполнение справочника причин блокировки...', end='')
+        reason_count = [0,0]
+        for item in initial_black_reasons:
+
+            rsn, created = Reasons.objects.get_or_create(
+                reason_description=item)
+
+            if created:
+                reason_count[0] += 1
+            else:
+                reason_count[1] += 1
+        
+        print(f"Добавлено {reason_count[0]} причин, а также {reason_count[1]} причин уже существуют")
         
 
         print('Скрипт закончил работу')
