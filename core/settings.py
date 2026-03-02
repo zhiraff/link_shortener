@@ -51,6 +51,16 @@ while not DB_ADDRESS:
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
 
+# Use SSL
+SPSH = os.environ.get('SECURE_PROXY_SSL_HEADER', 'False')
+if SPSH.lower() not in ('false', '0'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'True')
+if CSRF_COOKIE_SECURE.lower() in ('false', '0') or not CSRF_COOKIE_SECURE:
+    CSRF_COOKIE_SECURE = False
+else:
+    CSRF_COOKIE_SECURE = True
 
 # Application definition
 
