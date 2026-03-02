@@ -10,6 +10,7 @@ from celery import current_task, shared_task
 
 from shortener.models import ShortLink, UploadFile
 from .generators import generate_short_link
+from .create_short_link import create_short_link
 
 
 @shared_task
@@ -57,27 +58,6 @@ def process_excel(_id: str, usr_name: str="Anonymous") -> None:
     
     print(f"Ищем URL в столбце {url_column_index}")
     
-    # Функция для проверки URL
-    def is_valid_url(text):
-        if not isinstance(text, str):
-            return False
-        
-        # Простая проверка URL
-        url_pattern = re.compile(
-            r'^(https?://)?'  # протокол
-            r'([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'  # домен
-            r'(:[0-9]+)?'  # порт
-            r'(/[^\s]*)?$'  # путь
-        )
-        
-        try:
-            result = urlparse(text)
-            # Проверяем, что есть домен
-            return all([result.scheme in ['http', 'https', ''], 
-                       result.netloc or (result.path and '.' in result.path)])
-        except:
-            return False
-    
     # Создаем колонки для результатов если их нет
     status_col = url_column_index + 1
     qr_col = url_column_index + 2
@@ -93,31 +73,21 @@ def process_excel(_id: str, usr_name: str="Anonymous") -> None:
         
         if pd.isna(cell_value):
             continue
-            
-        # Проверяем, является ли значение URL
-        if is_valid_url(str(cell_value)):
-            url = str(cell_value)
+        
+        result = create_short_link(str(cell_value))
 
-            # Возьмём старую ссылку если есть, если нет то созхдадим новую
-            short_tag = ShortLink.objects.get_or_create(
-            full_link=url,
-            owner_user=usr_name,
-            defaults={'short_link': generate_short_link(),
-                          }
-            )
-            short_url = f"{os.environ.get('DOMAIN')}/{short_tag[0]}"
-
-            # Добавляем укороченную ссылку
-            df.iat[idx, status_col] = short_url
-
-            # Добавляем ссылку на QR-код
-            df.iat[idx, qr_col] = f"{os.environ.get('DOMAIN')}{short_tag[0].qr_code.url}" 
-
-        else:
-            # Если не URL, ставим пустые значения
-            df.iat[idx, status_col] = ""
+        if result[0] != 200:
+            df.iat[idx, status_col] = result[1]
             df.iat[idx, qr_col] = ""
-    
+        else:
+            short_tag, tag_created = result[1]
+
+        # Добавляем укороченную ссылку
+            df.iat[idx, status_col] = f"{os.environ.get('DOMAIN')}/{short_tag}"
+        
+        # Добавляем ссылку на QR-код
+            df.iat[idx, qr_col] = f"{os.environ.get('DOMAIN')}{short_tag.qr_code.url}" 
+            
     # Сохраняем результат в BytesIO
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:

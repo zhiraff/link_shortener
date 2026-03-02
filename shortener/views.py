@@ -14,6 +14,7 @@ from blacklist.models import BlackHost
 from .models import ShortLink, UploadFile
 
 from .forms import SingleURLForm, BatchProcessForm
+from .utils.create_short_link import create_short_link
 from .utils.generators import generate_short_link
 from .utils.excel_processor import process_excel
 
@@ -76,27 +77,10 @@ def index_view(request):
             # отправили форму с ссылкой
             # получим данные из AJAX запроса
             original_url = (request.POST.get("url") or "").strip()
-            if not original_url:
-                return JsonResponse({"error": "Не передан URL."}, status=400)
-
-            # валидируем что это норм ссылка
-            try:
-                url_validator(original_url)
-            except ValidationError:
-                return JsonResponse({"error": "Некорректный URL."}, status=400)
-            
-            # Проверяем что хост не в чёрном списке
-            is_black, reason_black = is_black_host(original_url)
-            if is_black:
-                return JsonResponse({"error": f"Не удалось сократить ссылку, хост находится в чёрном списке по причине: {reason_black}"}, status=400)
-            
-            # Возьмём старую ссылку если есть, если нет то создадим новую
-            short_tag, tag_created = ShortLink.objects.get_or_create(
-            full_link=original_url,
-            owner_user=usr_name,
-            defaults={'short_link': generate_short_link(),
-                          }
-                                )
+            result = create_short_link(original_url, usr_name)
+            if result[0] != 200:
+                return JsonResponse({"error": result[1]}, status=result[0])
+            short_tag, tag_created = result[1]
 
             # сгененрируем нормальную короткую ссылку
             short_url = request.build_absolute_uri(
@@ -183,22 +167,11 @@ class CreateSingleLinkView(generics.GenericAPIView):
         serializer.validate(request.data)
         if serializer.is_valid():
             # serializer.data['password1']
-            try:
-                url_validator(serializer.data['link'])
-            except ValidationError:
-                return JsonResponse({'error': f"Не верный url: '{serializer.data['link']}'"}, status=status.HTTP_400_BAD_REQUEST)
+            result = create_short_link(serializer.data['link'])
+            if result[0] != 200:
+                return JsonResponse({"error": result[1]}, status=result[0])
+            short_tag, tag_created = result[1]
 
-            # Проверяем что хост не в чёрном списке
-            is_black, reason_black = is_black_host(original_url)
-            if is_black:
-                return JsonResponse({"error": f"Не удалось сократить ссылку, хост находится в чёрном списке по причине: {reason_black}"}, status=400)
-            
-            # Возьмём старую ссылку если есть, если нет то созхдадим новую
-            short_tag = ShortLink.objects.get_or_create(
-            full_link=serializer.data['link'],
-            defaults={'short_link': generate_short_link(),
-                          }
-        )
         short_url = f"{os.environ.get('DOMAIN')}/{short_tag[0]}" 
         return JsonResponse({'short_link': short_url}, status=status.HTTP_200_OK)
 
