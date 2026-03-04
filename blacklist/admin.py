@@ -11,6 +11,8 @@ class BlackHostAdmin(admin.ModelAdmin):
     fields = ("host", "reason", "created_at", "updated_at")
     readonly_fields = ("created_at", "updated_at")
 
+    search_fields = ['host']
+
     # def get_queryset(self, request):
     #     qs = super().get_queryset(request)
         

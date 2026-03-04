@@ -160,7 +160,7 @@ class UploadFileAdmin(admin.ModelAdmin):
 
         # вызовем celery для обработки
 
-        process_excel.delay(upl_file.pk, request.user.username)
+        process_excel.delay(obj.pk, request.user.username)
     
     def response_add(self, request, obj, post_url_continue=None):
         if getattr(request, '_save_error', False):
