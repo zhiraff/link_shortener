@@ -23,12 +23,13 @@ class ShortLinkAdmin(admin.ModelAdmin):
     get_colour.short_description = 'Цвет ссылки'
 
     def get_short_link(self, obj):
-        return format_html(f"<a target=blank href='{os.environ.get('DOMAIN')}/{obj.short_link}'>{os.environ.get('DOMAIN')}/{obj.short_link}</a>")
+        domain = os.environ.get('DOMAIN')
+        return format_html("<a target=blank href='{}/{}'>{}/{}</a>", domain, obj.short_link, domain, obj.short_link)
     get_short_link.short_description = 'Короткая ссылка'
 
     def get_qrcode(self, object):
         if object.qr_code.name:
-            return format_html(f"<img src='{object.qr_code.url}' width=50>")
+            return format_html("<img src='{}' width=50>", object.qr_code.url)
         else:
             return "no image"
     get_qrcode.short_description = 'QR Код'
@@ -101,28 +102,28 @@ class UploadFileAdmin(admin.ModelAdmin):
   
     def get_file_status(self, obj):
         if obj.file_status == 'created':
-            return format_html(f"<span download class='badge text-bg-primary'>{obj.get_file_status_display()}</span>")
+            return format_html("<span download class='badge text-bg-primary'>{}</span>", obj.get_file_status_display())
         elif obj.file_status == 'processing':
-            return format_html(f"<span download class='badge text-bg-warning'>{obj.get_file_status_display()}</span>")
+            return format_html("<span download class='badge text-bg-warning'>{}</span>", obj.get_file_status_display())
         elif obj.file_status == 'done':
-            return format_html(f"<span download class='badge text-bg-success'>{obj.get_file_status_display()}</span>")
+            return format_html("<span download class='badge text-bg-success'>{}</span>", obj.get_file_status_display())
         elif obj.file_status == 'error':
-            return format_html(f"<span download class='badge text-bg-danger'>{obj.get_file_status_display()}</span>")
+            return format_html("<span download class='badge text-bg-danger'>{}</span>", obj.get_file_status_display())
         else:
-            return format_html(f"<span download class='badge text-bg-secondary'>{obj.get_file_status_display()}</span>")
+            return format_html("<span download class='badge text-bg-secondary'>{}</span>", obj.get_file_status_display())
 
     get_file_status.short_description = 'Статус файла'
 
     def get_input_file_link(self, obj):
         if obj.input_file.name:
-            return format_html(f"<a href='{obj.input_file.url}' download class='badge text-bg-primary'>скачать</a>")
+            return format_html("<a href='{}' download class='badge text-bg-primary'>скачать</a>", obj.input_file.url)
         return 'no file'
 
     get_input_file_link.short_description = 'Скачать исходный файл'
 
     def get_output_file_link(self, obj):
         if obj.output_file.name:
-            return format_html(f"<a href='{obj.output_file.url}' download class='badge text-bg-primary'>скачать</a>")
+            return format_html("<a href='{}' download class='badge text-bg-primary'>скачать</a>", obj.output_file.url)
         return 'no file'
 
     get_output_file_link.short_description = 'Скачать результирующий файл'

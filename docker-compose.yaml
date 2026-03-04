@@ -33,6 +33,10 @@ services:
     volumes:
       - media_data:/app/media
       - static_data:/app/static
+# add migration volumes in prod
+#       - migrations_data/account:/app/account/migrations
+#       - migrations_data/shortener:/app/shortener/migrations
+#       - migrations_data/blacklist:/app/blacklist/migrations
 
   shortener-database:
     container_name: shortener-database
