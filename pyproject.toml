@@ -1,32 +1,33 @@
 [project]
-name = "link-shortener"
+name = "shortener"
 version = "0.1.0"
-description = ""
+description = "Short large url to small link"
 authors = [
-    {name = "Pigolev Timofey"}
+    {name = "timapigolev@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
-    "django (==4.2.27)",
-    "gunicorn (==23.0.0)",
     "celery (==5.5.3)",
-    "django-celery-results (==2.6.0)",
+    "django (==6.0.2)",
     "django-cleanup (==9.0.0)",
     "django-cors-headers (==4.4.0)",
+    "django-filter (==23.5)",
+    "django-celery-results (==2.6.0)",
+    "djangorestframework (==3.16.1)",
+    "djangorestframework-simplejwt (==5.5.1)",
+    "drf-yasg (==1.21.14)",
     "flower (==2.0.1)",
+    "gunicorn (==23.0.0)",
+    "numpy (==2.4.2)",
     "openpyxl (==3.1.5)",
-    "pandas (==2.1.4)",
+    "pandas (==3.0.1)",
     "pillow (==10.4.0)",
-    "psycopg2-binary (==2.9.9)",
+    "psycopg2-binary (==2.9.11)",
+    "python-dotenv (==1.2.1)",
     "qrcode (==7.4.2)",
     "redis (==6.1.1)",
-    "numpy (==1.26.3)",
-    "django-filter (==23.5)",
-    "djangorestframework (==3.16.1)",
-    "djangorestframework_simplejwt (==5.5.1)",
-    "drf-yasg (==1.21.14)",
-    "python-dotenv (==1.2.1)"
+    "social-auth-app-django (==5.7.0)",
 ]
 
 

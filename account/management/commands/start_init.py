@@ -1,13 +1,21 @@
 import os
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group, Permission
 from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand
+from django.conf import settings
+
 from blacklist.models import Reasons
 from blacklist.enums import initial_black_reasons
 
+
 class Command(BaseCommand):
     help = 'Заполнение таблиц первичными данными'
+
+    guest_group = settings.GUEST_GROUP
+    guest_permissions = [Permission.objects.get(codename=x) for x in settings.GUEST_PERMISSIONS]
+
     def handle(self, *args, **options):
         Users = get_user_model()
         print('Проверка суперпользователя...', end='')
@@ -47,6 +55,14 @@ class Command(BaseCommand):
                 reason_count[1] += 1
         
         print(f"Добавлено {reason_count[0]} причин, а также {reason_count[1]} причин уже существуют")
+
+        print('Создание гостевой группы...', end='')
+        guest_group, created = Group.objects.get_or_create(name=self.guest_group)
+        guest_group.permissions.set(self.guest_permissions)
+        if created:
+            print('Гостевая группа создана')
+        else:
+            print('Гостевая группа уже существует')
         
 
         print('Скрипт закончил работу')

@@ -71,16 +71,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_celery_results',
-    'django_cleanup',
-    "rest_framework_simplejwt",
-    "rest_framework_simplejwt.token_blacklist",
-    "rest_framework",
-    "drf_yasg",
-    'corsheaders',
-    'shortener.apps.ShortenerConfig',
-    'account.apps.AccountConfig',
-    'blacklist.apps.BlacklistConfig',
+    'django.contrib.sites',  # Обязательно для social-auth
+    'social_django',          # приложение для соц. авторизации
+    'django_celery_results',    # отображение резлтатов выполнения тасков в админке
+    'django_cleanup',   #   Удаление файлов, на которых нет ссылок в БД
+    "rest_framework_simplejwt", #   Для авторизации по JWT токенам
+    "rest_framework_simplejwt.token_blacklist", #   Отображение токенов в админке
+    "rest_framework",   # DRF
+    "drf_yasg", # swagger
+    'corsheaders',  #   для задания цорсов (cors)
+    'shortener.apps.ShortenerConfig',   #   основное приложэние
+    'account.apps.AccountConfig',   #   кастомные аккаунты пользаков
+    'blacklist.apps.BlacklistConfig',   #   чёрный список
 ]
 
 MIDDLEWARE = [
@@ -205,8 +207,14 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.getenv("DATA_UPLOAD_MAX_NUMBER_FIELDS"))
 
 if PREFFIX_PATH:
     LOGIN_REDIRECT_URL = f"{PREFFIX_PATH}"
+    LOGOUT_REDIRECT_URL = f"{PREFFIX_PATH}"
+    LOGIN_URL = f"{PREFFIX_PATH}/login"        # URL страницы с формой входа
+    LOGIN_ERROR_URL = f"{PREFFIX_PATH}/login-error/"
 else:
     LOGIN_REDIRECT_URL = "/"
+    LOGOUT_REDIRECT_URL = "/"
+    LOGIN_URL = '/login'        # URL страницы с формой входа
+    LOGIN_ERROR_URL = '/login-error/'
 
 # redis
 if os.environ.get('REDIS_PROTOCOL', None) and os.environ.get('REDIS_HOST', None) and os.environ.get('REDIS_PORT', None):
@@ -258,7 +266,7 @@ REST_FRAMEWORK = {
     #    'send_lpr_basket_ready': os.getenv("THROTTLE_RATE_SEND_LPR_BASKET_READY", '1/hour'),
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
+    #'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
     'DATE_FORMAT': "%d.%m.%Y",
     'DATETIME_FORMAT': "%d.%m.%y %H:%M:%S",
     # 'DEFAULT_PERMISSION_CLASSES': (
@@ -278,6 +286,64 @@ SWAGGER_SETTINGS = {
       }
    }
 }
+
+# Настройки авторизации через соцсети
+SITE_ID = 1
+
+
+AUTHENTICATION_BACKENDS = (
+    # Авторизация через соцсети
+    # 'social_core.backends.vk.VKOAuth2',          # VK
+    'social_core.backends.google.GoogleOAuth2',   # Google
+    # 'social_core.backends.github.GithubOAuth2',   # GitHub
+    # 'social_core.backends.yandex.YandexOAuth2',    # Yandex
+    # Стандартный бэкенд Django
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+SOCIAL_AUTH_VK_OAUTH2_KEY = os.environ.get('VK_OAUTH2_KEY', None)       # Ваш ID приложения
+SOCIAL_AUTH_VK_OAUTH2_SECRET = os.environ.get('VK_OAUTH2_SECRET', None) # Защищенный ключ
+
+SOCIAL_AUTH_YANDEX_OAUTH2_KEY = os.environ.get('YANDEX_OAUTH2_KEY', None)
+SOCIAL_AUTH_YANDEX_OAUTH2_SECRET = os.environ.get('YANDEX_OAUTH2_SECRET', None)
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('GOOGLE_OAUTH2_KEY', None)
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('GOOGLE_OAUTH2_SECRET', None)
+
+SOCIAL_AUTH_GITHUB_KEY = os.environ.get('GITHUB_KEY', None)
+SOCIAL_AUTH_GITHUB_SECRET = os.environ.get('GITHUB_SECRET', None)
+
+SOCIAL_AUTH_PIPELINE = (
+    # Стандартные pipeline-функции social-auth
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.auth_allowed',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.user.get_username',
+    'social_core.pipeline.user.create_user',  # Создание пользователя
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+    'social_core.pipeline.user.user_details',
+    
+    'account.pipeline.add_to_guest_group_and_staff', 
+)
+
+SOCIAL_AUTH_USER_MODEL = 'account.CustomUser'
+
+# Параметры гостевой группы
+GUEST_GROUP = 'guest'
+
+GUEST_PERMISSIONS = (
+        'view_blackhost',
+        'view_uploadfile',
+        'delete_uploadfile',
+        'change_uploadfile',
+        'add_uploadfile',
+        'view_shortlink',
+        'delete_shortlink',
+        'change_shortlink',
+        'add_shortlink',
+    )
 
 # JWT
 #JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
