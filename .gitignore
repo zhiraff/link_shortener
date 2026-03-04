@@ -7,8 +7,8 @@ db.sqlite3
 */*/*/__pycache__
 */*/*/*/__pycache__
 */migrations/0*
-media
-static
+/media
+/static
 .env
 .env_db
 .env_local
