@@ -111,7 +111,7 @@ def resolve_slug_view(request, slug):
     try:
         short_record = ShortLink.objects.get(short_link=slug)
         
-        if short_record.colour != 'green' or short_record.colour != '':
+        if short_record.colour != 'green' and short_record.colour != '':
             blkhst = BlackHost.objects.select_related('reason').get(host=short_record.host)
             context = {'target_url': short_record.full_link, 
             'host': short_record.host,
