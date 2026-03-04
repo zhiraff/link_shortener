@@ -293,10 +293,10 @@ SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = (
     # Авторизация через соцсети
-    # 'social_core.backends.vk.VKOAuth2',          # VK
+    'social_core.backends.vk.VKOAuth2',          # VK
     'social_core.backends.google.GoogleOAuth2',   # Google
-    # 'social_core.backends.github.GithubOAuth2',   # GitHub
-    # 'social_core.backends.yandex.YandexOAuth2',    # Yandex
+    'social_core.backends.github.GithubOAuth2',   # GitHub
+    'social_core.backends.yandex.YandexOAuth2',    # Yandex
     # Стандартный бэкенд Django
     'django.contrib.auth.backends.ModelBackend',
 )
