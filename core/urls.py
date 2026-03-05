@@ -50,13 +50,14 @@ schema_view = get_schema_view(
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('auth/', include('social_django.urls', namespace='social')),
-    path('account/', include('account.urls', namespace='account')),
-    path("api/v1/link/", include("shortener.urls_api")),
-    path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path('admin/', admin.site.urls),    #   админка
+    path('auth/', include('social_django.urls', namespace='social')),   #   Авторизация через соцсети
+    path('account/', include('account.urls', namespace='account')), #   работа с аккаунтами
+    path("api/v1/link/", include("shortener.urls_api")),    #   API
+    path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),  #   swagger
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),    #   swagger
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'), #   redoc
+    path('captcha/', include('captcha.urls')), # Путь для капчи
     path('', include('shortener.urls')),
 ]
 

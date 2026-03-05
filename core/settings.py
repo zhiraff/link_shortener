@@ -83,6 +83,7 @@ INSTALLED_APPS = [
     'shortener.apps.ShortenerConfig',   #   основное приложэние
     'account.apps.AccountConfig',   #   кастомные аккаунты пользаков
     'blacklist.apps.BlacklistConfig',   #   чёрный список
+    'captcha',  #   Капча для форм
 ]
 
 MIDDLEWARE = [

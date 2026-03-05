@@ -5,12 +5,12 @@ from django.urls import reverse_lazy
 from django.contrib.auth.models import Group
 from django.conf import settings
 
-from .forms import CustomUserCreationForm
+from .forms import CustomUserCaptchaCreationForm
 
 
 def register(request):
     if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
+        form = CustomUserCaptchaCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
 
@@ -24,6 +24,6 @@ def register(request):
             return redirect('shortener:index') 
 
     else:
-        form = CustomUserCreationForm()
+        form = CustomUserCaptchaCreationForm()
     return render(request, 'account/register.html', {'form': form})
 
