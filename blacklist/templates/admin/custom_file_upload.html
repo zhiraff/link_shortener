@@ -1,0 +1,20 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div id="content-main">
+    <h1>Загрузка файла для обработки</h1>
+    
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div>
+            <label for="file_input">Выберите файл:</label>
+            <input type="file" name="uploaded_file" id="file_input" required>
+        </div>
+        <div style="margin-top: 20px;">
+            <button type="submit" class="button">Загрузить и обработать</button>
+        </div>
+    </form>
+    
+    <!-- Здесь можно добавить прогресс-бар, если нужна асинхронная загрузка -->
+</div>
+{% endblock %}
