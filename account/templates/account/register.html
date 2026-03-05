@@ -93,6 +93,9 @@
           </div>
         {% endif %}
       </div>
+      <div class="captcha-container">
+        {{ form.captcha.render }}
+      </div>
       <div>
         <input
           type="password"
@@ -131,6 +134,9 @@
     <button type="submit" class="btn-primary" style="align-self:flex-start;">
       Зарегистрироваться
     </button>
+    <a href="{% url 'shortener:index' %}" class="btn-secondary" style="text-decoration:none;">
+      На главную
+    </a>
   </form>
 </div>
 {% endblock %}
