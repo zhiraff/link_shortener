@@ -104,6 +104,8 @@ TEMPLATES = [
         'DIRS': [
                 BASE_DIR / 'templates',
                 BASE_DIR / 'shortener' / 'templates',
+                BASE_DIR / 'account' / 'templates',
+                BASE_DIR / 'blacklist' / 'templates',
                 ],
         'APP_DIRS': True,
         'OPTIONS': {
